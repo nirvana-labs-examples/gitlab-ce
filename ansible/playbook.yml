@@ -1,0 +1,54 @@
+---
+- name: Install GitLab CE
+  hosts: gitlab
+  become: yes
+  vars:
+    gitlab_external_url: "http://{{ ansible_host }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install dependencies
+      apt:
+        name:
+          - curl
+          - openssh-server
+          - ca-certificates
+          - tzdata
+          - perl
+        state: present
+
+    - name: Check if GitLab is already installed
+      stat:
+        path: /opt/gitlab
+      register: gitlab_installed
+
+    - name: Add GitLab repository
+      shell: curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
+      when: not gitlab_installed.stat.exists
+
+    - name: Install GitLab CE
+      environment:
+        EXTERNAL_URL: "{{ gitlab_external_url }}"
+      apt:
+        name: gitlab-ce
+        state: present
+      when: not gitlab_installed.stat.exists
+
+    - name: Reconfigure GitLab
+      command: gitlab-ctl reconfigure
+      when: not gitlab_installed.stat.exists
+
+    - name: Get initial root password
+      slurp:
+        src: /etc/gitlab/initial_root_password
+      register: root_password
+      ignore_errors: yes
+
+    - name: Display initial root password
+      debug:
+        msg: "Initial root password: {{ root_password.content | b64decode | regex_search('Password: (.+)', '\\1') | first }}"
+      when: root_password is succeeded
