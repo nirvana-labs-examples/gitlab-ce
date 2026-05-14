@@ -138,3 +138,7 @@ sudo cat /etc/gitlab/initial_root_password
 cd terraform
 terraform destroy -var='ssh_public_key=...' -var='project_id=...'
 ```
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE.md).
